@@ -596,6 +596,72 @@ renderResults=function(data){
     analyzerResults.appendChild(section);
   }
 };
+               /* === PATCH 4A: METRIC BOOST GENERATOR === */
+var p4s=document.createElement('style');
+p4s.textContent='.mb-section{margin-top:20px}.mb-head{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;background:rgba(120,80,255,.06);border-bottom:1px solid rgba(120,80,255,.15)}.mb-metric{font-family:var(--fh);font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--violet)}.mb-arrow{display:flex;align-items:center;gap:6px;font-family:var(--fh);font-size:11px;font-weight:700}.mb-from{color:var(--amber)}.mb-to{color:var(--green)}.mb-arr{color:var(--dim);font-size:10px}.mb-card{border:1px solid rgba(120,80,255,.15);border-radius:10px;overflow:hidden;margin-bottom:12px;transition:border-color .2s}.mb-card:hover{border-color:rgba(120,80,255,.3)}';
+document.head.appendChild(p4s);
+window._lastMetricBoosts=[];
+
+function findBSent(sentences,used,fn){for(var i=0;i<sentences.length;i++){var s=sentences[i].trim();if(used.indexOf(s)===-1&&fn(s,i)){used.push(s);return s;}}for(var i=0;i<sentences.length;i++){var s=sentences[i].trim();if(used.indexOf(s)===-1&&wc(s)>8){used.push(s);return s;}}return null;}
+
+function genMetricBoosts(text,sentences,metrics,existSugs){
+var boosts=[],lo=text.toLowerCase(),used=[];
+if(existSugs)for(var i=0;i<existSugs.length;i++)if(existSugs[i].original)used.push(existSugs[i].original);
+
+if(metrics.voiceMatch.score<90){var cs=metrics.voiceMatch.score;var sent=null,rw,prob,exp;
+var hasSP=VOICE.strategicPhrases.some(function(p){return lo.includes(p)});
+var weC=(lo.match(/\b(we|our|us)\b/g)||[]).length;
+var hasAf=VOICE.africanRefs.some(function(r){return lo.includes(r)});
+if(!hasSP){sent=findBSent(sentences,used,function(s){return wc(s)>10&&/\b(business|market|consumer|value|growth|strategy|impact|brand)\b/i.test(s)});if(sent){var phr='value creation';if(/consumer|customer/i.test(sent))phr='empathy for consumer reality';else if(/sustain|environment|community/i.test(sent))phr='sustainability you can touch';else if(/local|market/i.test(sent))phr='local intelligence';rw=sent.replace(/[.!?]$/,'')+' — this is what '+phr+' demands of us.';prob='Add Strategic Phrase';exp='Adding Mr. Tobi\'s signature phrase "'+phr+'" is one of the strongest voice alignment signals.';}}
+if(!sent&&weC<3){sent=findBSent(sentences,used,function(s){return/\b(they|companies|organizations|businesses|the industry|the sector|leaders)\b/i.test(s)});if(sent){rw=sent.replace(/\bThe industry\b/g,'Our industry').replace(/\bthe industry\b/g,'our industry').replace(/\bThe sector\b/g,'Our sector').replace(/\bthe sector\b/g,'our sector').replace(/\bCompanies\b/g,'We').replace(/\bcompanies\b/g,'we').replace(/\bLeaders\b/g,'We as leaders').replace(/\bleaders\b/g,'we as leaders').replace(/\bOrganizations\b/g,'We').replace(/\borganizations\b/g,'our organizations').replace(/\bThey\b/g,'We').replace(/\bthey\b/g,'we');prob='Add Inclusive "We" Framing';exp='Converting third-person to inclusive "we/our" is one of the fastest ways to match Mr. Tobi\'s voice.';}}
+if(!sent&&!hasAf){sent=findBSent(sentences,used,function(s){return wc(s)>12});if(sent){rw=sent.replace(/[.!?]$/,', especially in the Nigerian market where these dynamics shape everyday reality.');prob='Add Nigerian/African Context';exp='Mr. Tobi\'s voice is anchored in African market realities. Nigerian context is central to his brand.';}}
+if(!sent){sent=findBSent(sentences,used,function(s){return wc(s)>8});if(sent){rw='We must be intentional here. '+sent.replace(/[.!?]$/,'')+' — and it starts with value creation at every level.';prob='Strengthen Voice Identity';exp='Combining inclusive "we" with strategic phrasing lifts voice alignment.';}}
+if(sent&&rw)boosts.push({problem:prob,original:sent,rewrite:rw,explanation:exp,metric:'voiceMatch',metricLabel:'Voice Match',currentScore:cs});}
+
+if(metrics.toneAlignment.score<90){var cs=metrics.toneAlignment.score;var sent=null,rw,prob,exp;
+var convC=countTerms(lo,VOICE.conversational);var empC=countTerms(lo,VOICE.empathetic);
+if(convC<2){sent=findBSent(sentences,used,function(s){return wc(s)>12&&wc(s)<40});if(sent){rw='Here is what we cannot afford to ignore: '+sent.charAt(0).toLowerCase()+sent.slice(1);prob='Add Conversational Tone';exp='Opening with conversational phrases like "Here is what..." creates Mr. Tobi\'s signature warmth and directness.';}}
+if(!sent&&empC<3){sent=findBSent(sentences,used,function(s){return wc(s)>12&&!/people|human|lives|families|communities/i.test(s)});if(sent){rw=sent.replace(/[.!?]$/,'')+' — and at the heart of this are the people and communities whose lives depend on these decisions.';prob='Add Empathetic Language';exp='Mr. Tobi connects business strategy to human impact. Empathetic language shows leadership that genuinely cares.';}}
+if(!sent){sent=findBSent(sentences,used,function(s){return wc(s)>10&&/\b(could|might|may|perhaps|possibly)\b/i.test(s)});if(sent){rw=sent.replace(/\bcould\b/gi,'must').replace(/\bmight\b/gi,'will').replace(/\bperhaps\b/gi,'clearly').replace(/\bpossibly\b/gi,'undeniably').replace(/\bmay\b/gi,'will');if(rw===sent)rw=sent.replace(/[.!?]$/,'')+' — this is not optional, it is essential.';prob='Strengthen Decisive Language';exp='Replace hedging words (could, might, perhaps) with decisive language (must, will, clearly) to project authority.';}}
+if(!sent){sent=findBSent(sentences,used,function(s){return wc(s)>10});if(sent){rw='Let us be honest: '+sent.charAt(0).toLowerCase()+sent.slice(1).replace(/[.!?]$/,'')+' — and it matters for every community we serve.';prob='Balance Authority With Empathy';exp='Mr. Tobi\'s tone combines directness with genuine care.';}}
+if(sent&&rw)boosts.push({problem:prob,original:sent,rewrite:rw,explanation:exp,metric:'toneAlignment',metricLabel:'Tone Alignment',currentScore:cs});}
+
+if(metrics.authority.score<90){var cs=metrics.authority.score;var sent=null,rw,prob,exp;
+var dHits=0;for(var dp=0;dp<VOICE.dataPatterns.length;dp++){var pat=VOICE.dataPatterns[dp];var dm=text.match(new RegExp(pat.source,pat.flags.indexOf('g')>=0?pat.flags:pat.flags+'g'));dHits+=dm?dm.length:0;}
+var epN=countTerms(lo,['in my experience',"i've seen","i believe","research shows","data shows"]);
+if(dHits<2){sent=findBSent(sentences,used,function(s){return wc(s)>15&&!/\d/.test(s)});if(sent){rw='The data is instructive here. '+sent.replace(/[.!?]$/,'')+' — recent industry research puts this at [insert relevant %, figure, or data point].';prob='Add Data-Backed Evidence';exp='Mr. Tobi anchors every major claim with concrete data. Replace the bracket with a real statistic for maximum impact.';}}
+if(!sent&&epN<1){sent=findBSent(sentences,used,function(s){return wc(s)>12});if(sent){rw='In my experience across markets, '+sent.charAt(0).toLowerCase()+sent.slice(1);prob='Add Expert Positioning';exp='"In my experience" positions the author as a practitioner, not a commentator. Central to thought leadership credibility.';}}
+if(!sent){sent=findBSent(sentences,used,function(s){return wc(s)>10});if(sent){rw=sent.replace(/[.!?]$/,'')+' — and the evidence from industry benchmarks consistently reinforces this position.';prob='Strengthen Evidence Base';exp='Referencing benchmarks elevates claims from opinion to thought leadership.';}}
+if(sent&&rw)boosts.push({problem:prob,original:sent,rewrite:rw,explanation:exp,metric:'authority',metricLabel:'Authority',currentScore:cs});}
+
+if(metrics.clarity.score<90){var cs=metrics.clarity.score;var sent=null,rw,prob,exp;
+var lens=sentences.map(function(s){return wc(s)});var maxL=Math.max.apply(null,lens);var shortC=lens.filter(function(l){return l>=3&&l<=15}).length;var trC=countTerms(lo,VOICE.transitions);
+if(maxL>40){sent=findBSent(sentences,used,function(s){return wc(s)>40});if(sent){var wds=sent.split(/\s+/);var mid=Math.floor(wds.length/2);var ba=mid;for(var bi=Math.max(mid-6,1);bi<Math.min(mid+6,wds.length);bi++){if(/[,;]$/.test(wds[bi])||/^(and|but|which|while|yet|however)$/i.test(wds[bi])){ba=/[,;]$/.test(wds[bi])?bi+1:bi;break;}}var fh=wds.slice(0,ba).join(' ').replace(/[,;]$/,'')+'.';var sh=wds.slice(ba).join(' ').trim();sh=sh.charAt(0).toUpperCase()+sh.slice(1);rw=fh+' '+sh;prob='Break Up Long Sentence ('+wc(sent)+' words)';exp='Mr. Tobi uses sentences of 5-40 words max. Breaking this up creates his signature cadence.';}}
+if(!sent&&shortC<2){sent=findBSent(sentences,used,function(s){return wc(s)>20});if(sent){rw='This matters. '+sent;prob='Add Short Punchy Sentence';exp='Mr. Tobi uses short impactful statements (5-15 words) before analytical passages to create emphasis.';}}
+if(!sent&&trC<2){sent=findBSent(sentences,used,function(s,i){return i>0&&wc(s)>10});if(sent){var tr='Critically, ';if(/problem|challenge|risk|difficult/i.test(sent))tr='However, ';else if(/result|outcome|therefore/i.test(sent))tr='Indeed, ';rw=tr+sent.charAt(0).toLowerCase()+sent.slice(1);prob='Add Transitional Flow';exp='Strategic transitions guide the reader and create the logical flow of strong editorial writing.';}}
+if(!sent){sent=findBSent(sentences,used,function(s){return wc(s)>20});if(sent){rw='The point is clear. '+sent;prob='Improve Sentence Rhythm';exp='A short declarative before analytical content creates Mr. Tobi\'s cadence.';}}
+if(sent&&rw)boosts.push({problem:prob,original:sent,rewrite:rw,explanation:exp,metric:'clarity',metricLabel:'Clarity',currentScore:cs});}
+
+if(metrics.originality.score<90){var cs=metrics.originality.score;var sent=null,rw,prob,exp;
+var foundCl=null;for(var ci=0;ci<VOICE.cliches.length;ci++){if(lo.includes(VOICE.cliches[ci])){foundCl=VOICE.cliches[ci];break;}}
+var hasPdx=countTerms(lo,VOICE.paradoxMarkers)>=2;
+if(foundCl){sent=findBSent(sentences,used,function(s){return s.toLowerCase().includes(foundCl)});if(sent){var crp=VOICE.clicheReplacements[foundCl]||'a more intentional approach';var crx=new RegExp(foundCl.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');rw=sent.replace(crx,crp);prob='Replace Cliche: "'+foundCl+'"';exp='Mr. Tobi\'s voice avoids generic jargon. Replace "'+foundCl+'" with specific, original language.';}}
+if(!sent&&!hasPdx){sent=findBSent(sentences,used,function(s){return wc(s)>12});if(sent){rw='Yet here lies the paradox: '+sent.charAt(0).toLowerCase()+sent.slice(1);prob='Add Paradox/Contrast Framing';exp='Mr. Tobi uses paradox and contrast to reveal non-obvious insights, creating intellectual depth.';}}
+if(!sent){sent=findBSent(sentences,used,function(s){return wc(s)>10});if(sent){rw=sent.replace(/[.!?]$/,'')+' — and this is not abstract theory, it is the lived reality we see across markets from Lagos to Johannesburg.';prob='Add Specificity and Vivid Language';exp='Specific references and places create the distinctive voice readers remember.';}}
+if(sent&&rw)boosts.push({problem:prob,original:sent,rewrite:rw,explanation:exp,metric:'originality',metricLabel:'Originality',currentScore:cs});}
+
+return boosts;
+  }
+               /* === PATCH 4B: INTEGRATION & DISPLAY === */
+var _p4A=analyzeLocally;
+analyzeLocally=function(text){var result=_p4A(text);var sentences=splitSentences(text);result.metricBoosts=genMetricBoosts(text,sentences,result.metrics,result.suggestions);window._lastMetricBoosts=result.metricBoosts;return result;};
+
+if(typeof generateAfterText==='function'){var _p4AT=generateAfterText;generateAfterText=function(originalText,suggestions){var result=_p4AT(originalText,suggestions);for(var i=0;i<window._lastMetricBoosts.length;i++){var b=window._lastMetricBoosts[i];if(b.original&&b.rewrite&&result.indexOf(b.original)!==-1){result=result.replace(b.original,b.rewrite);}}return result;};}
+
+function buildMBCards(boosts){return boosts.map(function(b){return '<div class="mb-card"><div class="mb-head"><span class="mb-metric">'+escH(b.metricLabel)+'</span><div class="mb-arrow"><span class="mb-from">'+b.currentScore+'</span><span class="mb-arr">→</span><span class="mb-to">90+</span></div></div><div class="sug-prob">⬆ '+escH(b.problem)+'</div><div class="sug-b"><div class="sug-bl sl-orig">Original</div><div class="sug-bt st-orig">"'+escH(b.original)+'"</div></div><div class="sug-b"><div class="sug-bl sl-rew">Boosted Rewrite</div><div class="sug-bt st-rew">"'+escH(b.rewrite)+'"</div></div><div class="sug-b"><div class="sug-bl sl-why">Why This Boosts Score</div><div class="sug-bt st-why">'+escH(b.explanation)+'</div></div></div>';}).join('');}
+
+var _p4R=renderResults;
+renderResults=function(data){window._lastMetricBoosts=data.metricBoosts||[];_p4R(data);var old=document.getElementById('metric-boosts-panel');if(old)old.remove();if(data.metricBoosts&&data.metricBoosts.length>0){var el=document.createElement('div');el.id='metric-boosts-panel';el.className='glass glass-v pad mb-section';var allAt90=data.metricBoosts.length===0;el.innerHTML='<div class="panel-title">⬆ Metric Boost Recommendations</div><div class="panel-sub">'+data.metricBoosts.length+' targeted fixes — one per metric below 90. All applied to the "After" text above.</div>'+buildMBCards(data.metricBoosts);document.getElementById('analyzer-results').appendChild(el);}};
              </script>
 </body>
 </html>
