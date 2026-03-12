@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TA — Executive Voice Alignment Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg: #03070f;--bg2: #060d1e;--panel: rgba(8,16,44,.72);--card: rgba(8,14,38,.6);
+  --border: rgba(0,200,255,.14);--border-v: rgba(120,80,255,.2);--cyan: #00c8ff;
+  --cyan-lo: rgba(0,200,255,.1);--violet: #7850ff;--violet-lo:rgba(120,80,255,.12);
+  --green: #00e5a0;--amber: #ffb830;--red: #ff4f6a;--text: #cde4f8;
+  --mid: #6a8fb0;--dim: #304560;--fh: 'Orbitron', sans-serif;
+  --fb: 'Space Grotesk', sans-serif;--r: 12px;--r2: 18px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:var(--fb);background:var(--bg);color:var(--text);height:100%}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,200,255,.2);border-radius:2px}
+button{font-family:var(--fb);cursor:pointer}
+textarea{font-family:var(--fb)}
+.bg-fixed{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:radial-gradient(ellipse 80% 60% at 20% 10%,rgba(0,80,180,.18),transparent),radial-gradient(ellipse 60% 50% at 80% 80%,rgba(100,40,200,.14),transparent),radial-gradient(ellipse 70% 40% at 60% 30%,rgba(0,120,180,.1),transparent),var(--bg);}
+.grid-overlay{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(0,200,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.025) 1px,transparent 1px);background-size:56px 56px;}
+.orb{position:fixed;border-radius:50%;filter:blur(90px);pointer-events:none;z-index:0;}
+.orb1{width:500px;height:500px;top:-150px;left:-100px;background:rgba(0,80,200,.15);animation:orbmove 14s ease-in-out infinite alternate}
+.orb2{width:400px;height:400px;bottom:-80px;right:-80px;background:rgba(100,0,200,.12);animation:orbmove 18s ease-in-out infinite alternate-reverse}
+.orb3{width:300px;height:300px;top:40%;left:55%;background:rgba(0,160,200,.1);animation:orbmove 10s ease-in-out infinite alternate}
+@keyframes orbmove{from{transform:translate(0,0)}to{transform:translate(40px,30px)}}
+.page{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column;}
+.topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;flex-shrink:0;background:rgba(3,7,15,.85);border-bottom:1px solid var(--border);backdrop-filter:blur(24px);}
+.brand{display:flex;align-items:center;gap:11px}
+.brand-badge{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--violet));display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-size:12px;font-weight:900;color:#03070f;box-shadow:0 0 16px rgba(0,200,255,.3);flex-shrink:0;}
+.brand-name{font-family:var(--fh);font-size:11px;font-weight:700;color:var(--cyan);letter-spacing:.08em}
+.brand-sub{font-size:9px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.tab-nav{display:flex;gap:2px;background:rgba(0,0,0,.3);padding:5px;border-radius:10px;border:1px solid var(--border)}
+.tnav{padding:7px 20px;border-radius:7px;border:none;background:transparent;font-family:var(--fh);font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--mid);transition:all .2s;position:relative;display:flex;align-items:center;gap:6px;}
+.tnav:hover{color:var(--text);background:rgba(0,200,255,.07)}
+.tnav.active{color:var(--cyan);background:rgba(0,200,255,.12);border:1px solid rgba(0,200,255,.22)}
+.ndot{width:5px;height:5px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan);animation:blinkdot 2s infinite;display:none;}
+.ndot.on{display:inline-block}
+@keyframes blinkdot{0%,100%{opacity:1}50%{opacity:.25}}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.live-pill{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(0,229,160,.07);border:1px solid rgba(0,229,160,.2);border-radius:100px;font-size:9px;color:var(--green);letter-spacing:.12em;text-transform:uppercase;font-weight:500;}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blinkdot 1.8s infinite}
+.settings-btn{width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--mid);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .25s;}
+.settings-btn:hover{color:var(--cyan);background:var(--cyan-lo);border-color:var(--cyan);transform:rotate(72deg)}
+.tab-section{display:none}
+.tab-section.active{display:block}
+.wrap{max-width:1280px;margin:0 auto;padding:36px 40px;display:flex;flex-direction:column;gap:20px}
+.glass{background:var(--panel);border:1px solid var(--border);border-radius:var(--r2);backdrop-filter:blur(20px);position:relative;overflow:hidden;}
+.glass::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.35;}
+.glass-v{border-color:var(--border-v)}
+.glass-v::after{background:linear-gradient(90deg,transparent,var(--violet),transparent)}
+.pad{padding:24px 28px}
+.eq3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:stretch}
+.eq2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch}
+.panel-title{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text);margin-bottom:3px}
+.panel-sub{font-size:11px;color:var(--mid);font-weight:300;margin-bottom:18px}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:80px 24px;}
+.empty-icon{font-size:44px;opacity:.35}
+.empty-h{font-family:var(--fh);font-size:16px;color:var(--mid);letter-spacing:.05em}
+.empty-p{font-size:13px;color:var(--dim);max-width:320px;line-height:1.75;font-weight:300}
+.go-btn{padding:10px 26px;border-radius:9px;border:1px solid var(--border);background:var(--cyan-lo);color:var(--cyan);font-family:var(--fh);font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;transition:all .2s;}
+.go-btn:hover{box-shadow:0 0 20px rgba(0,200,255,.2)}
+             .stat-tile{display:flex;align-items:center;gap:14px;padding:18px 22px;}
+.stat-icon{width:40px;height:40px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.stat-num{font-family:var(--fh);font-size:22px;font-weight:700;line-height:1}
+.stat-lbl{font-size:10px;color:var(--mid);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
+.editor-wrap{padding:28px 32px;display:flex;flex-direction:column;gap:0}
+.editor-topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+.editor-heading{font-family:var(--fh);font-size:13px;font-weight:700;color:var(--text);letter-spacing:.06em}
+.editor-hint{font-size:11px;color:var(--mid);font-weight:300;margin-top:3px}
+.realtime-tag{display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.2);border-radius:6px;font-family:var(--fh);font-size:9px;font-weight:600;color:var(--cyan);letter-spacing:.12em;text-transform:uppercase;flex-shrink:0;}
+.article-ta{width:100%;min-height:380px;background:rgba(3,7,15,.5);border:1px solid rgba(0,200,255,.1);border-radius:10px;padding:20px;font-size:14px;line-height:1.85;color:var(--text);outline:none;resize:vertical;transition:border-color .2s,box-shadow .2s;}
+.article-ta:focus{border-color:rgba(0,200,255,.3);box-shadow:0 0 0 3px rgba(0,200,255,.07),inset 0 0 24px rgba(0,200,255,.03);}
+.article-ta::placeholder{color:var(--dim);font-style:italic;font-weight:300}
+.editor-foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid rgba(0,200,255,.07);}
+.wc{font-size:11px;color:var(--dim)}
+.wc span{color:var(--cyan);font-weight:500}
+.run-btn{display:flex;align-items:center;gap:8px;padding:12px 30px;border:none;border-radius:9px;background:linear-gradient(120deg,var(--cyan),#4090ff,var(--violet));background-size:200% 200%;animation:gshift 4s ease infinite;font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#03070f;box-shadow:0 0 24px rgba(0,200,255,.25);transition:transform .2s,box-shadow .2s;}
+.run-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 36px rgba(0,200,255,.4)}
+.run-btn:disabled{opacity:.45;cursor:not-allowed;animation:none;transform:none}
+@keyframes gshift{0%{background-position:0 50%}50%{background-position:100% 50%}100%{background-position:0 50%}}
+.spin{width:13px;height:13px;border:2px solid rgba(3,7,15,.3);border-top-color:#03070f;border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
+@keyframes rot{to{transform:rotate(360deg)}}
+.err{margin-top:12px;padding:10px 14px;border-radius:8px;background:rgba(255,79,106,.07);border:1px solid rgba(255,79,106,.22);font-size:12px;color:#ff9aaa;display:none}
+.score-banner{display:flex;align-items:center;gap:36px;padding:28px 36px;}
+.ring-wrap{position:relative;width:120px;height:120px;flex-shrink:0}
+.score-info{flex:1}
+.score-lbl{font-size:9px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--mid);margin-bottom:5px}
+.score-big{font-family:var(--fh);font-size:52px;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.score-verdict{font-size:13px;color:var(--mid);font-weight:300;margin-top:6px;line-height:1.6}
+.mini-scores{display:flex;gap:10px;margin-left:auto;flex-shrink:0}
+.ms-tile{text-align:center;padding:10px 14px;border-radius:9px;min-width:78px;background:rgba(3,7,15,.5);border:1px solid rgba(0,200,255,.1);}
+.ms-lbl{font-size:8px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.ms-val{font-family:var(--fh);font-size:17px;font-weight:700}
+.col-inner{padding:24px;height:100%;display:flex;flex-direction:column}
+.metric-item{padding:13px 0;border-bottom:1px solid rgba(0,200,255,.06);display:flex;flex-direction:column;gap:5px;}
+.metric-item:last-child{border-bottom:none}
+.mi-row{display:flex;align-items:center;justify-content:space-between}
+.mi-name{font-size:12px;font-weight:500;color:var(--text)}
+.mi-score{font-family:var(--fh);font-size:13px;font-weight:700}
+.mi-bar{height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;margin-top:2px}
+.mi-fill{height:100%;border-radius:2px;transition:width 1.2s ease}
+.mi-insight{font-size:11px;color:var(--mid);font-weight:300;line-height:1.6;margin-top:3px}
+.sug-card{border:1px solid rgba(0,200,255,.09);border-radius:10px;overflow:hidden;margin-bottom:12px;transition:border-color .2s;}
+.sug-card:hover{border-color:rgba(0,200,255,.22)}
+.sug-prob{padding:7px 13px;background:rgba(255,79,106,.06);border-bottom:1px solid rgba(255,79,106,.12);font-size:9px;font-weight:600;color:#ff9aaa;letter-spacing:.14em;text-transform:uppercase;}
+.sug-b{padding:9px 13px;border-bottom:1px solid rgba(0,200,255,.05)}
+.sug-b:last-child{border-bottom:none}
+.sug-bl{font-size:8px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;margin-bottom:3px}
+.sug-bt{font-size:12px;font-weight:300;line-height:1.65}
+.sl-orig{color:#ff7a8e}.st-orig{color:rgba(255,122,142,.8);font-style:italic}
+.sl-rew{color:#00e5a0}.st-rew{color:rgba(0,229,160,.85)}
+.sl-why{color:var(--dim)}.st-why{color:var(--mid);font-size:11px}
+.hm-legend{display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap}
+.hm-li{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid)}
+.hm-dot{width:9px;height:9px;border-radius:3px}
+.hm-body{font-size:14px;line-height:2.15;font-weight:300}
+.hm-g{background:rgba(0,229,160,.13);border-radius:4px;padding:1px 4px;color:#6ee7b7;cursor:default}
+.hm-y{background:rgba(255,184,48,.11);border-radius:4px;padding:1px 4px;color:#fcd34d;cursor:default}
+.hm-r{background:rgba(255,79,106,.1);border-radius:4px;padding:1px 4px;color:#fca5a5;cursor:default}
+.hm-n{color:var(--mid)}
+.vp-tile{padding:18px 20px}
+.vp-tlbl{font-size:8px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--violet);margin-bottom:8px}
+.vp-tval{font-size:12px;color:var(--text);font-weight:300;line-height:1.75}
+.phrase{display:inline-block;padding:2px 9px;margin:3px 3px 3px 0;border-radius:100px;background:var(--violet-lo);border:1px solid var(--border-v);font-size:10px;color:#c4b5fd;}
+.overlay{position:fixed;inset:0;background:rgba(3,7,15,.55);backdrop-filter:blur(4px);z-index:300;display:none;}
+.overlay.on{display:block}
+.drawer{position:fixed;top:0;right:0;width:480px;max-width:96vw;height:100vh;background:#060e22;border-left:1px solid var(--border);box-shadow:-16px 0 60px rgba(0,200,255,.08);z-index:301;overflow-y:auto;transform:translateX(100%);transition:transform .34s cubic-bezier(.4,0,.2,1);}
+.drawer.on{transform:translateX(0)}
+.drawer-head{position:sticky;top:0;background:#060e22;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:20px 26px;border-bottom:1px solid var(--border);}
+.dh-title{font-family:var(--fh);font-size:11px;font-weight:700;color:var(--text);letter-spacing:.08em}
+.dh-close{background:rgba(255,255,255,.06);border:none;border-radius:7px;width:28px;height:28px;font-size:16px;color:var(--mid);display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.dh-close:hover{background:var(--cyan-lo);color:var(--cyan)}
+.drawer-body{padding:22px 26px;display:flex;flex-direction:column;gap:22px}
+.d-section-lbl{font-size:8px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.corpus-ok{display:flex;align-items:center;gap:9px;padding:11px 14px;border-radius:9px;background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.18);margin-bottom:12px;}
+.stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.s3b{padding:12px;border-radius:9px;background:rgba(8,14,38,.6);border:1px solid var(--border);text-align:center}
+.s3n{font-family:var(--fh);font-size:18px;font-weight:700;color:var(--cyan)}
+.s3l{font-size:9px;color:var(--dim);margin-top:3px;letter-spacing:.08em;text-transform:uppercase}
+.uz{border:1px dashed rgba(0,200,255,.18);border-radius:10px;padding:18px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:10px;}
+.uz:hover{border-color:var(--cyan);background:rgba(0,200,255,.04)}
+.uz-ic{font-size:20px;margin-bottom:5px}
+.uz-m{font-size:12px;font-weight:500;color:var(--mid)}
+.uz-h{font-size:10px;color:var(--dim);margin-top:2px}
+.drawer-kv{background:rgba(8,14,38,.5);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;}
+.kv{display:flex;align-items:center;justify-content:space-between}
+.kv-k{font-size:11px;color:var(--mid)}
+.kv-v{font-size:10px;color:var(--cyan);font-family:var(--fh);font-weight:600}
+@media(max-width:900px){.eq3{grid-template-columns:1fr}.eq2{grid-template-columns:1fr}.score-banner{flex-direction:column;align-items:flex-start}.mini-scores{margin-left:0;flex-wrap:wrap}.topbar{padding:0 16px;gap:8px}.wrap{padding:20px 16px}.tab-nav{display:none}}
+</style>
+</head>
+<body>
+<div class="bg-fixed"></div>
+<div class="grid-overlay"></div>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+<div class="page">
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-badge">TA</div>
+    <div>
+      <div class="brand-name">Executive Voice Analyzer</div>
+      <div class="brand-sub">AI Voice Intelligence</div>
+    </div>
+  </div>
+  <div class="tab-nav">
+    <button class="tnav active" onclick="goTab('dashboard')">Dashboard</button>
+    <button class="tnav" onclick="goTab('analyzer')">Analyzer <span class="ndot" id="dot-analyzer"></span></button>
+    <button class="tnav" onclick="goTab('insights')">Insights <span class="ndot" id="dot-insights"></span></button>
+  </div>
+  <div class="topbar-right">
+    <div class="live-pill"><div class="live-dot"></div>Profile Active</div>
+    <button class="settings-btn" onclick="openDrawer()">⚙</button>
+  </div>
+</header>
+            <!-- DASHBOARD -->
+<section class="tab-section active" id="tab-dashboard">
+  <div class="wrap">
+    <div class="eq3">
+      <div class="glass stat-tile">
+        <div class="stat-icon" style="background:rgba(0,200,255,.1)">📄</div>
+        <div><div class="stat-num" style="color:var(--cyan)" id="pg-articles">4</div><div class="stat-lbl">Reference Articles</div></div>
+      </div>
+      <div class="glass stat-tile">
+        <div class="stat-icon" style="background:rgba(120,80,255,.1)">🧠</div>
+        <div><div class="stat-num" style="color:var(--violet)">47</div><div class="stat-lbl">Voice Signals</div></div>
+      </div>
+      <div class="glass stat-tile">
+        <div class="stat-icon" style="background:rgba(0,229,160,.1)">⚡</div>
+        <div><div class="stat-num" style="color:var(--green)" id="pg-runs">0</div><div class="stat-lbl">Analyses Run</div></div>
+      </div>
+    </div>
+    <div class="glass editor-wrap">
+      <div class="editor-topbar">
+        <div>
+          <div class="editor-heading">Article Input</div>
+          <div class="editor-hint">Paste the article to run a voice alignment analysis</div>
+        </div>
+        <div class="realtime-tag">
+          <span class="live-dot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan)"></span>
+          Built-In Engine
+        </div>
+      </div>
+      <textarea class="article-ta" id="article-input" placeholder="Paste the article you want to run a tone analysis on…" oninput="updateWC()"></textarea>
+      <div class="editor-foot">
+        <span class="wc">Words: <span id="wc-val">0</span> · Min. 60 recommended</span>
+        <button class="run-btn" id="run-btn" onclick="runAnalysis()">⚡ Run Voice Analysis</button>
+      </div>
+      <div class="err" id="err-msg"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYZER -->
+<section class="tab-section" id="tab-analyzer">
+  <div class="wrap">
+    <div class="glass" id="analyzer-empty">
+      <div class="empty">
+        <div class="empty-icon">⚡</div>
+        <div class="empty-h">No Analysis Yet</div>
+        <div class="empty-p">Go to Dashboard, paste your article, and hit Run Voice Analysis to see the full breakdown here.</div>
+        <button class="go-btn" onclick="goTab('dashboard')">Go to Dashboard →</button>
+      </div>
+    </div>
+    <div id="analyzer-results" style="display:none">
+      <div class="glass score-banner">
+        <div class="ring-wrap">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(0,200,255,.08)" stroke-width="8"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke-width="8" stroke-linecap="round" transform="rotate(-90 60 60)" id="overall-arc" style="transition:stroke-dashoffset 1.4s ease">
+              <animate attributeName="stroke" values="#00c8ff;#7850ff;#00c8ff" dur="3s" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        </div>
+        <div class="score-info">
+          <div class="score-lbl">Overall Alignment Score</div>
+          <div class="score-big" id="overall-num">—</div>
+          <div class="score-verdict" id="overall-verdict"></div>
+        </div>
+        <div class="mini-scores" id="mini-scores"></div>
+      </div>
+      <div class="eq3" style="align-items:stretch">
+        <div class="glass" style="display:flex;flex-direction:column">
+          <div class="col-inner">
+            <div class="panel-title">Voice Profile Radar</div>
+            <div class="panel-sub">Article vs. Mr. Tobi baseline</div>
+            <svg id="radar-svg" viewBox="0 0 260 230" style="width:100%;display:block;flex:1"></svg>
+            <div style="display:flex;gap:14px;justify-content:center;margin-top:14px">
+              <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--mid)"><div style="width:16px;height:2px;background:var(--cyan);box-shadow:0 0 4px var(--cyan)"></div>Article</div>
+              <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--mid)"><div style="width:16px;height:2px;background:var(--violet);opacity:.6"></div>Mr. Tobi</div>
+            </div>
+          </div>
+        </div>
+        <div class="glass" style="display:flex;flex-direction:column">
+          <div class="col-inner">
+            <div class="panel-title">Metric Breakdown</div>
+            <div class="panel-sub">Score + editorial insight per dimension</div>
+            <div id="metric-list" style="flex:1"></div>
+          </div>
+        </div>
+        <div class="glass glass-v" style="display:flex;flex-direction:column">
+          <div class="col-inner" style="overflow-y:auto;max-height:580px">
+            <div class="panel-title">AI Suggestions</div>
+            <div class="panel-sub" id="sug-lbl-a">—</div>
+            <div id="sug-list-a"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+             <!-- INSIGHTS -->
+<section class="tab-section" id="tab-insights">
+  <div class="wrap">
+    <div class="glass" id="insights-empty">
+      <div class="empty">
+        <div class="empty-icon">🔬</div>
+        <div class="empty-h">No Insights Yet</div>
+        <div class="empty-p">Run a voice analysis first to unlock the heatmap, full suggestions, and Mr. Tobi's extracted voice profile.</div>
+        <button class="go-btn" onclick="goTab('dashboard')">Go to Dashboard →</button>
+      </div>
+    </div>
+    <div id="insights-results" style="display:none;flex-direction:column;gap:20px">
+      <div class="glass pad">
+        <div class="panel-title">Voice Alignment Heatmap</div>
+        <div class="panel-sub">Sentence-by-sentence analysis — hover any sentence for the alignment reason</div>
+        <div class="hm-legend">
+          <div class="hm-li"><div class="hm-dot" style="background:rgba(0,229,160,.5)"></div>Aligned with Mr. Tobi's voice</div>
+          <div class="hm-li"><div class="hm-dot" style="background:rgba(255,184,48,.5)"></div>Moderate deviation</div>
+          <div class="hm-li"><div class="hm-dot" style="background:rgba(255,79,106,.5)"></div>Tone or structure mismatch</div>
+        </div>
+        <div class="hm-body" id="heatmap-body"></div>
+      </div>
+      <div class="eq2">
+        <div class="glass" style="display:flex;flex-direction:column">
+          <div class="col-inner" style="overflow-y:auto;max-height:520px">
+            <div class="panel-title">Full Improvement Suggestions</div>
+            <div class="panel-sub" id="sug-lbl-i">—</div>
+            <div id="sug-list-i"></div>
+          </div>
+        </div>
+        <div class="glass glass-v" style="display:flex;flex-direction:column">
+          <div class="col-inner">
+            <div class="panel-title">Executive Voice Profile</div>
+            <div class="panel-sub">AI-extracted writing characteristics from approved corpus</div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div class="vp-tile"><div class="vp-tlbl">Tone Style</div><div class="vp-tval">Authoritative and advisory — speaks as a trusted senior executive, not an observer. Data-backed and empathetic.</div></div>
+              <div class="vp-tile" style="padding-top:0"><div class="vp-tlbl">Sentence Structure</div><div class="vp-tval">Strategic mix: short punchy statements (5–15 words) alternate with medium analytical sentences (20–40 words) for rhythm and impact.</div></div>
+              <div class="vp-tile" style="padding-top:0"><div class="vp-tlbl">Perspective</div><div class="vp-tval">Inclusive "we" framing, first-person executive voice. Closes with an open community engagement question.</div></div>
+              <div class="vp-tile" style="padding-top:0">
+                <div class="vp-tlbl">Strategic Phrases</div>
+                <div>
+                  <span class="phrase">value creation</span>
+                  <span class="phrase">local intelligence</span>
+                  <span class="phrase">sustainability you can touch</span>
+                  <span class="phrase">the Nigerian consumer</span>
+                  <span class="phrase">empathy for consumer reality</span>
+                  <span class="phrase">global benchmarks</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- SETTINGS DRAWER -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="dh-title">Settings & Corpus</div>
+    <button class="dh-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div>
+      <div class="d-section-lbl">Corpus Status</div>
+      <div class="corpus-ok">
+        <div class="live-dot" style="background:var(--green);box-shadow:0 0 6px var(--green)"></div>
+        <span style="font-size:12px;color:var(--green);font-weight:500">Voice Profile Active</span>
+        <span style="font-size:11px;color:var(--dim);margin-left:4px">— Ready for analysis</span>
+      </div>
+      <div class="stat3">
+        <div class="s3b"><div class="s3n" id="d-art">4</div><div class="s3l">Articles</div></div>
+        <div class="s3b"><div class="s3n" style="color:var(--violet)" id="d-cap">8</div><div class="s3l">Captions</div></div>
+        <div class="s3b"><div class="s3n" style="color:var(--green)">47</div><div class="s3l">Signals</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="d-section-lbl">Corpus Training</div>
+      <div class="uz" onclick="bumpArt()"><div class="uz-ic">📤</div><div class="uz-m">Upload Reference Articles</div><div class="uz-h">.docx or .txt — click to add</div></div>
+      <div class="uz" onclick="bumpCap()"><div class="uz-ic">✏️</div><div class="uz-m">Upload Approved Captions</div><div class="uz-h">.docx or .txt — click to add</div></div>
+    </div>
+    <div>
+      <div class="d-section-lbl">Voice Profile Summary</div>
+      <div style="background:rgba(8,14,38,.6);border:1px solid var(--border-v);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div><div style="font-size:8px;color:var(--violet);letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px;font-weight:600">Tone</div><div style="font-size:12px;color:var(--mid);font-weight:300;line-height:1.7;font-style:italic">"Authoritative yet conversational and empathetic — data-backed thought leadership bridging corporate insight with human impact"</div></div>
+        <div><div style="font-size:8px;color:var(--violet);letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px;font-weight:600">Key Phrases</div><div><span class="phrase">value creation</span><span class="phrase">local intelligence</span><span class="phrase">the Nigerian consumer</span></div></div>
+        <div><div style="font-size:8px;color:var(--violet);letter-spacing:.18em;text-transform:uppercase;margin-bottom:5px;font-weight:600">Rhythm</div><div style="font-size:12px;color:var(--mid);font-weight:300">Short punchy (5–15 words) alternating with analytical (20–40 words)</div></div>
+      </div>
+    </div>
+    <div>
+      <div class="d-section-lbl">Analysis Engine</div>
+      <div style="padding:12px 14px;border-radius:9px;background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.18);">
+        <div style="font-size:12px;color:var(--green);font-weight:500;margin-bottom:4px">✓ Built-in analysis engine active</div>
+        <div style="font-size:11px;color:var(--mid);font-weight:300;line-height:1.6">No API key required. All analysis runs locally in your browser.</div>
+      </div>
+    </div>
+    <div>
+      <div class="d-section-lbl">Analysis Settings</div>
+      <div class="drawer-kv">
+        <div class="kv"><span class="kv-k">Engine</span><span class="kv-v">Built-In NLP</span></div>
+        <div class="kv"><span class="kv-k">Heatmap</span><span class="kv-v">Sentence-level</span></div>
+        <div class="kv"><span class="kv-k">Suggestions per run</span><span class="kv-v">3–5</span></div>
+        <div class="kv"><span class="kv-k">Baseline</span><span class="kv-v">Mr. Tobi (Active)</span></div>
+        <div class="kv"><span class="kv-k">API Key</span><span class="kv-v">Not Required</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+             <script>
+function goTab(id){document.querySelectorAll('.tab-section').forEach(function(s){s.classList.remove('active')});document.querySelectorAll('.tnav').forEach(function(b){b.classList.remove('active')});document.getElementById('tab-'+id).classList.add('active');var map={dashboard:0,analyzer:1,insights:2};document.querySelectorAll('.tnav')[map[id]].classList.add('active');window.scrollTo({top:0,behavior:'smooth'});}
+function openDrawer(){document.getElementById('overlay').classList.add('on');document.getElementById('drawer').classList.add('on');}
+function closeDrawer(){document.getElementById('overlay').classList.remove('on');document.getElementById('drawer').classList.remove('on');}
+function bumpArt(){var a=document.getElementById('d-art'),p=document.getElementById('pg-articles');a.textContent=+a.textContent+1;p.textContent=+p.textContent+1;}
+function bumpCap(){document.getElementById('d-cap').textContent=+document.getElementById('d-cap').textContent+1;}
+function updateWC(){var t=document.getElementById('article-input').value.trim();document.getElementById('wc-val').textContent=t?t.split(/\s+/).filter(Boolean).length:0;}
+function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function sc(s){return s>=80?'var(--cyan)':s>=60?'var(--amber)':'var(--red)'}
+function bar(s){return s>=80?'linear-gradient(90deg,var(--cyan),#4090ff)':s>=60?'linear-gradient(90deg,var(--amber),#fb923c)':'linear-gradient(90deg,var(--red),#ec4899)'}
+
+function drawRadar(art,bl){var svg=document.getElementById('radar-svg');var cx=130,cy=118,R=88;var labels=['Voice','Tone','Authority','Clarity','Originality'];var keys=['voiceMatch','toneAlignment','authority','clarity','originality'];var n=labels.length;var ang=labels.map(function(_,i){return i*2*Math.PI/n-Math.PI/2});function pt(score,a){var d=(score/100)*R;return[cx+d*Math.cos(a),cy+d*Math.sin(a)]}var h='<defs><filter id="gf"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="var(--cyan)"/><stop offset="100%" stop-color="var(--violet)"/></linearGradient></defs>';[25,50,75,100].forEach(function(v){var pts=ang.map(function(a){return pt(v,a).map(function(n){return n.toFixed(1)}).join(',')}).join(' ');h+='<polygon points="'+pts+'" fill="none" stroke="rgba(0,200,255,.06)" stroke-width="1"/>';});ang.forEach(function(a){var p=pt(100,a);h+='<line x1="'+cx+'" y1="'+cy+'" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+'" stroke="rgba(0,200,255,.08)" stroke-width="1"/>';});var bPts=ang.map(function(a,i){return pt(bl[keys[i]],a).map(function(v){return v.toFixed(1)}).join(',')}).join(' ');h+='<polygon points="'+bPts+'" fill="rgba(120,80,255,.1)" stroke="rgba(120,80,255,.55)" stroke-width="1.5" stroke-dasharray="5 3"/>';var aPts=ang.map(function(a,i){return pt(art[keys[i]],a).map(function(v){return v.toFixed(1)}).join(',')}).join(' ');h+='<polygon points="'+aPts+'" fill="rgba(0,200,255,.1)" stroke="url(#rg)" stroke-width="2"/>';ang.forEach(function(a,i){var p=pt(art[keys[i]],a);h+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="4" fill="var(--cyan)" filter="url(#gf)"/>';});labels.forEach(function(lbl,i){var p=pt(110,ang[i]);var anchor=p[0]<cx-8?'end':p[0]>cx+8?'start':'middle';h+='<text x="'+p[0].toFixed(1)+'" y="'+(p[1]+4).toFixed(1)+'" text-anchor="'+anchor+'" font-size="10" fill="rgba(106,143,176,.9)" font-family="Space Grotesk">'+lbl+'</text>';});svg.innerHTML=h;}
+
+function buildSugs(suggestions){return suggestions.map(function(s){return '<div class="sug-card"><div class="sug-prob">⚠ '+escH(s.problem)+'</div><div class="sug-b"><div class="sug-bl sl-orig">Original</div><div class="sug-bt st-orig">"'+escH(s.original)+'"</div></div><div class="sug-b"><div class="sug-bl sl-rew">Suggested Rewrite</div><div class="sug-bt st-rew">"'+escH(s.rewrite)+'"</div></div><div class="sug-b"><div class="sug-bl sl-why">Why</div><div class="sug-bt st-why">'+escH(s.explanation)+'</div></div></div>'}).join('');}
+
+function renderResults(data){var m=data.metrics;var bl={voiceMatch:100,toneAlignment:95,authority:90,clarity:92,originality:88};var keys=['voiceMatch','toneAlignment','authority','clarity','originality'];var lbls=['Voice Match','Tone Alignment','Authority','Clarity','Originality'];document.getElementById('analyzer-empty').style.display='none';document.getElementById('analyzer-results').style.display='block';var circ=2*Math.PI*50;var arc=document.getElementById('overall-arc');arc.setAttribute('stroke-dasharray',circ);arc.setAttribute('stroke-dashoffset',circ-(data.overallScore/100)*circ);document.getElementById('overall-num').textContent=data.overallScore;document.getElementById('overall-verdict').textContent=data.overallScore>=80?'Strong alignment — article closely mirrors Mr. Tobi\'s executive voice.':data.overallScore>=60?'Moderate alignment — targeted revisions will improve the voice match.':'Low alignment — significant rewrites needed to match Mr. Tobi\'s voice.';document.getElementById('mini-scores').innerHTML=lbls.map(function(l,i){return '<div class="ms-tile"><div class="ms-lbl">'+l+'</div><div class="ms-val" style="color:'+sc(m[keys[i]].score)+'">'+m[keys[i]].score+'</div></div>'}).join('');var artScores={};keys.forEach(function(k){artScores[k]=m[k].score});drawRadar(artScores,bl);document.getElementById('metric-list').innerHTML=lbls.map(function(lbl,i){return '<div class="metric-item"><div class="mi-row"><span class="mi-name">'+lbl+'</span><span class="mi-score" style="color:'+sc(m[keys[i]].score)+'">'+m[keys[i]].score+'</span></div><div class="mi-bar"><div class="mi-fill" style="width:'+m[keys[i]].score+'%;background:'+bar(m[keys[i]].score)+'"></div></div><div class="mi-insight">'+escH(m[keys[i]].insight)+'</div></div>'}).join('');var sugHtml=buildSugs(data.suggestions);var sugLbl=data.suggestions.length+' improvements identified';document.getElementById('sug-lbl-a').textContent=sugLbl;document.getElementById('sug-list-a').innerHTML=sugHtml;document.getElementById('insights-empty').style.display='none';document.getElementById('insights-results').style.display='flex';var map={green:'hm-g',yellow:'hm-y',red:'hm-r'};document.getElementById('heatmap-body').innerHTML=data.heatmap.map(function(item){return '<span class="'+(map[item.alignment]||'hm-n')+'" title="'+escH(item.reason)+'">'+escH(item.sentence)+'</span> '}).join('');document.getElementById('sug-lbl-i').textContent=sugLbl;document.getElementById('sug-list-i').innerHTML=sugHtml;document.getElementById('dot-analyzer').classList.add('on');document.getElementById('dot-insights').classList.add('on');var r=document.getElementById('pg-runs');r.textContent=+r.textContent+1;goTab('analyzer');}
+
+var VOICE={strategicPhrases:['value creation','local intelligence','sustainability you can touch','the nigerian consumer','empathy for consumer reality','global benchmarks','the integrity maven','consumer reality','local market'],authoritative:['must','critical','essential','imperative','fundamental','strategic','key','significant','decisive','clear','evident','undeniable','vital'],conversational:["let's","think about","consider","here's","isn't it","what if","imagine","look at","ask yourself","picture this","the truth is","honestly"],empathetic:['understand','feel','reality','human','people','communities','lives','families','consumers','empathy','compassion','struggle','hope','dignity','everyday','livelihoods','wellbeing','care'],dataPatterns:[/\d+\s*%/g,/\d+\s*(million|billion|trillion|bn|mn)/gi,/\$[\d,.]+/g,/₦[\d,.]+/g,/NGN\s*[\d,.]+/gi,/\d+\s*(percent)/gi],dataWords:['data','research','survey','report','statistics','study','findings','evidence','analysis','index','growth','decline','increase','decrease','gdp','revenue','margin','quarter','year-on-year','yoy','cagr'],africanRefs:['nigeria','nigerian','africa','african','lagos','abuja','fmcg','consumer goods','local market','domestic market','emerging market','west africa','sub-saharan','naira'],bizTerms:['market','industry','sector','growth','revenue','investment','strategy','leadership','innovation','stakeholder','supply chain','consumer','brand','portfolio','roi','margin','profit','shareholder','boardroom','executive','corporate','governance','sustainability','esg','value chain'],pillars:['corporate leadership','sustainability','youth development','fmcg','consumer goods','talent','mentoring','coaching','community'],cliches:['at the end of the day','think outside the box','low-hanging fruit','move the needle','synergy','paradigm shift','best in class','game changer','circle back','deep dive','leverage','pivot','disrupt','innovative solution','cutting edge','world class','best practice','going forward','touch base','take it to the next level','it goes without saying','needless to say','in this day and age','raise the bar','double down'],clicheReplacements:{'at the end of the day':'ultimately','think outside the box':'rethink our approach','low-hanging fruit':'immediate opportunities','move the needle':'drive measurable impact','game changer':'transformative shift','deep dive':'thorough examination','leverage':'harness','pivot':'reorient','cutting edge':'leading-edge','best practice':'proven approach','going forward':'from here','synergy':'collaboration','paradigm shift':'fundamental change','best in class':'industry-leading','circle back':'revisit','touch base':'connect','double down':'intensify our focus','raise the bar':'elevate the standard','disrupt':'reshape','innovative solution':'thoughtful approach','world class':'globally competitive','it goes without saying':'clearly','needless to say':'clearly','in this day and age':'today','take it to the next level':'elevate this further'},paradoxMarkers:['yet','but','however','paradox','contradiction','despite','although','while','on one hand','on the other','counterintuitive'],transitions:['however','moreover','furthermore','additionally','therefore','consequently','meanwhile','nevertheless','in fact','for instance','for example','in other words','that said','yet','still','indeed','critically','importantly','notably','specifically','ultimately']};
+
+function splitSentences(text){var cleaned=text.replace(/\n+/g,' ').replace(/\s+/g,' ').trim();var raw=cleaned.match(/[^.!?]*[.!?]+[\s"]*/g);if(!raw)return[cleaned];return raw.map(function(s){return s.trim()}).filter(function(s){return s.length>3});}
+function wc(s){return s.split(/\s+/).filter(Boolean).length;}
+function countTerms(text,terms){var t=text.toLowerCase();var c=0;for(var i=0;i<terms.length;i++){var term=terms[i];if(term instanceof RegExp){var m=text.match(new RegExp(term.source,term.flags.indexOf('g')>=0?term.flags:term.flags+'g'));c+=m?m.length:0;}else{var j=0;var s=term.toLowerCase();while((j=t.indexOf(s,j))!==-1){c++;j+=s.length;}}}return c;}
+function clamp(v,lo,hi){lo=lo||12;hi=hi||98;return Math.max(lo,Math.min(hi,Math.round(v)));}
+
+function scoreVoiceMatch(text,sentences){var lo=text.toLowerCase();var s=42;var pf=0;for(var i=0;i<VOICE.strategicPhrases.length;i++)if(lo.includes(VOICE.strategicPhrases[i])){pf++;s+=5;}s=Math.min(s,67+pf);var weN=(lo.match(/\b(we|our|us)\b/g)||[]).length;s+=weN>=6?12:weN>=3?8:weN>=1?4:0;var last=(sentences[sentences.length-1]||'').trim();if(last.endsWith('?'))s+=9;var midQ=sentences.slice(1,-1).filter(function(x){return x.trim().endsWith('?')}).length;s+=midQ>=2?7:midQ>=1?4:0;var af=countTerms(lo,VOICE.africanRefs);s+=af>=4?6:af>=2?4:af>=1?2:0;var iN=(text.match(/\bI\b/g)||[]).length;s+=iN>=3?4:iN>=1?2:0;var pi=countTerms(lo,VOICE.pillars);s+=pi>=2?4:pi>=1?2:0;var score=clamp(s);var insight;if(score>=80)insight='Strong voice alignment with '+pf+' strategic phrase(s) detected and effective use of inclusive "we" framing. The article captures Mr. Tobi\'s executive voice convincingly.';else if(score>=60)insight='Moderate voice match with '+pf+' strategic phrase(s) found. Consider weaving in more of Mr. Tobi\'s signature language to strengthen alignment.';else insight='The article diverges from Mr. Tobi\'s established voice. Key markers like strategic phrases, inclusive pronouns, and a closing engagement question are largely absent.';return{score:score,insight:insight};}
+
+function scoreToneAlignment(text,sentences){var lo=text.toLowerCase();var s=42;var authN=countTerms(lo,VOICE.authoritative);s+=authN>=6?12:authN>=3?8:authN>=1?4:0;var convN=countTerms(lo,VOICE.conversational);s+=convN>=4?12:convN>=2?7:convN>=1?4:0;var empN=countTerms(lo,VOICE.empathetic);s+=empN>=5?12:empN>=3?8:empN>=1?4:0;if(authN>=2&&empN>=2&&convN>=1)s+=8;var passiveHits=(text.match(/\b(is|are|was|were|been|being)\s+\w+ed\b/gi)||[]).length;var passiveRatio=passiveHits/Math.max(sentences.length,1);if(passiveRatio>0.35)s-=8;else if(passiveRatio<0.12)s+=4;var qN=sentences.filter(function(x){return x.trim().endsWith('?')}).length;s+=qN>=3?6:qN>=1?3:0;var score=clamp(s);var insight;if(score>=80)insight='The tone effectively balances authority with empathy, matching Mr. Tobi\'s signature style.';else if(score>=60)insight='The tone partially captures Mr. Tobi\'s voice but could benefit from more conversational warmth and empathetic language.';else insight='The tone feels detached from Mr. Tobi\'s expected voice. Add empathetic, conversational elements alongside data-backed authority.';return{score:score,insight:insight};}
+
+function scoreAuthority(text,sentences){var lo=text.toLowerCase();var s=40;var dataHits=0;for(var i=0;i<VOICE.dataPatterns.length;i++){var p=VOICE.dataPatterns[i];var m=text.match(new RegExp(p.source,p.flags.indexOf('g')>=0?p.flags:p.flags+'g'));dataHits+=m?m.length:0;}s+=dataHits>=5?14:dataHits>=3?10:dataHits>=1?6:0;var dw=countTerms(lo,VOICE.dataWords);s+=dw>=5?10:dw>=3?7:dw>=1?3:0;var expertPhrases=['in my experience',"i've seen","i believe","research shows","data shows","evidence suggests","studies show","we see"];var ep=countTerms(lo,expertPhrases);s+=ep>=2?10:ep>=1?5:0;var bt=countTerms(lo,VOICE.bizTerms);s+=bt>=8?10:bt>=4?7:bt>=2?4:bt>=1?2:0;var pi=countTerms(lo,VOICE.pillars);s+=pi>=2?5:pi>=1?3:0;var score=clamp(s);var insight;if(score>=80)insight='Strong authoritative positioning with solid data references and expert-level business language.';else if(score>=60)insight='Moderate authority. Adding more concrete data points and expert-positioning phrases would elevate the executive voice.';else insight='The article lacks the data-backed authority central to Mr. Tobi\'s voice. Include concrete numbers and expert-positioning language.';return{score:score,insight:insight};}
+
+function scoreClarity(text,sentences){var s=44;var lens=sentences.map(function(x){return wc(x)});var avg=lens.reduce(function(a,b){return a+b},0)/Math.max(lens.length,1);if(avg>=14&&avg<=26)s+=14;else if(avg>=10&&avg<=35)s+=8;else s-=4;var variance=lens.reduce(function(sum,l){return sum+Math.pow(l-avg,2)},0)/Math.max(lens.length,1);var sd=Math.sqrt(variance);if(sd>=5&&sd<=16)s+=12;else if(sd>=3&&sd<=22)s+=6;else s+=2;var shortN=lens.filter(function(l){return l>=3&&l<=15}).length;var shortR=shortN/Math.max(lens.length,1);if(shortR>=0.2&&shortR<=0.5)s+=10;else if(shortR>=0.1)s+=5;var veryLong=lens.filter(function(l){return l>50}).length;if(veryLong===0)s+=5;else s-=veryLong*4;var tr=countTerms(text.toLowerCase(),VOICE.transitions);s+=tr>=4?8:tr>=2?5:tr>=1?3:0;var score=clamp(s);var insight;if(score>=80)insight='Excellent clarity with well-varied sentence lengths (avg '+Math.round(avg)+' words). Matches Mr. Tobi\'s distinctive cadence.';else if(score>=60)insight='Good readability (avg '+Math.round(avg)+' words/sentence). Adding more short impactful sentences would recreate Mr. Tobi\'s signature rhythm.';else insight='Sentence structure needs attention (avg '+Math.round(avg)+' words/sentence). Aim for much more variety.';return{score:score,insight:insight};}
+
+function scoreOriginality(text,sentences){var lo=text.toLowerCase();var s=50;var clicheN=0;var foundC=[];for(var i=0;i<VOICE.cliches.length;i++){if(lo.includes(VOICE.cliches[i])){clicheN++;foundC.push(VOICE.cliches[i]);}}s-=clicheN*6;var words=lo.match(/\b[a-z']+\b/g)||[];var uniq=new Set(words).size;var ld=words.length>0?uniq/words.length:0;if(ld>=0.62)s+=14;else if(ld>=0.48)s+=8;else s+=2;var pn=countTerms(lo,VOICE.paradoxMarkers);s+=pn>=3?9:pn>=1?5:0;var vivid=['for example','for instance','specifically','precisely','notably','particularly'];var vn=countTerms(lo,vivid);s+=vn>=2?6:vn>=1?3:0;var proper=text.match(/[A-Z][a-z]{2,}/g)||[];var up=new Set(proper).size;s+=up>=5?6:up>=3?4:up>=1?2:0;var score=clamp(s);var insight;if(score>=80)insight='Strong originality with fresh language and effective paradox-framing.';else if(score>=60)insight='Moderate originality. '+(clicheN>0?'Detected '+clicheN+' cliche(s) that should be replaced.':'Add more concrete, specific examples.');else insight='The writing relies on generic language'+(clicheN>0?' with '+clicheN+' cliche(s) detected':'')+'. Replace overused phrases with original observations.';return{score:score,insight:insight};}
+function generateHeatmap(text,sentences){return sentences.map(function(sentence){var s=sentence.trim();var lo=s.toLowerCase();var w=wc(s);var pts=0,mx=10;var reasons=[];if(/\b(we|our|us)\b/i.test(s)){pts+=2;reasons.push('inclusive "we" framing');}if(/\d/.test(s)){pts+=2;reasons.push('data-backed');}if(w>=5&&w<=40){pts+=2;reasons.push('good sentence length');}else if(w>50)reasons.push('sentence too long');if(VOICE.strategicPhrases.some(function(p){return lo.includes(p)})){pts+=2;reasons.push('contains strategic phrase');}var hasAuth=VOICE.authoritative.some(function(m){return lo.includes(m)});var hasEmp=VOICE.empathetic.some(function(m){return lo.includes(m)});if(hasAuth||hasEmp){pts+=2;reasons.push(hasAuth&&hasEmp?'balanced authority & empathy':hasAuth?'authoritative tone':'empathetic tone');}for(var ci=0;ci<VOICE.cliches.length;ci++){if(lo.includes(VOICE.cliches[ci])){pts-=3;reasons.push('contains cliche');break;}}var ratio=pts/mx;var alignment,reason;if(ratio>=0.45){alignment='green';reason='Aligns well: '+(reasons.slice(0,2).join(', ')||'matches expected voice patterns');}else if(ratio>=0.15){alignment='yellow';reason='Partial match: '+(reasons[0]||'some voice markers present');}else{alignment='red';reason='Low alignment: missing key voice markers.';}return{sentence:s,alignment:alignment,reason:reason};});}
+
+function generateSuggestions(text,sentences){var lo=text.toLowerCase();var sug=[];var last=(sentences[sentences.length-1]||'').trim();if(!last.endsWith('?')){sug.push({problem:'Missing Closing Engagement Question',original:last,rewrite:last.replace(/[.!]$/,'')+' — I\'d love to hear your perspective. What has your experience been?',explanation:'Mr. Tobi consistently closes with an open community question, inviting dialogue.'});}var weN=(lo.match(/\bwe\b/g)||[]).length;if(weN<2){var target=sentences.find(function(s){return/\b(they|companies|organizations|businesses)\b/i.test(s)});if(target){sug.push({problem:'Lacks Inclusive Executive Voice',original:target.trim(),rewrite:target.trim().replace(/\bThey\b/,'We').replace(/\bthey\b/,'we').replace(/\bcompanies\b/,'we as industry leaders').replace(/\borganizations\b/,'our organizations').replace(/\bbusinesses\b/,'we'),explanation:'Mr. Tobi uses inclusive "we" framing to position himself within the narrative.'});}}var longSent=sentences.find(function(s){return wc(s)>45});if(longSent&&sug.length<5){var words=longSent.trim().split(/\s+/);var mid=Math.floor(words.length/2);var breakAt=mid;for(var i=Math.max(mid-6,1);i<Math.min(mid+6,words.length);i++){if(/[,;]$/.test(words[i])||/^(and|but|which|while|yet|however)$/i.test(words[i])){breakAt=/[,;]$/.test(words[i])?i+1:i;break;}}var p1=words.slice(0,breakAt).join(' ').replace(/[,;]$/,'.')+'.';var p2raw=words.slice(breakAt).join(' ');var p2=p2raw.charAt(0).toUpperCase()+p2raw.slice(1);sug.push({problem:'Sentence Too Long ('+wc(longSent)+' words)',original:longSent.trim(),rewrite:p1+' '+p2,explanation:'Mr. Tobi alternates short punchy sentences with medium analytical ones. Breaking long sentences creates his signature cadence.'});}for(var ci=0;ci<VOICE.cliches.length;ci++){var c=VOICE.cliches[ci];if(lo.includes(c)&&sug.length<5){var cSent=sentences.find(function(s){return s.toLowerCase().includes(c)});if(cSent){var rep=VOICE.clicheReplacements[c]||'more specific language';var regex=new RegExp(c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');sug.push({problem:'Cliche Detected: "'+c+'"',original:cSent.trim(),rewrite:cSent.trim().replace(regex,rep),explanation:'Mr. Tobi\'s voice avoids overused business jargon. Replace with specific, original language.'});break;}}}if(!/\d+/.test(text)&&sug.length<5){var analytical=sentences.find(function(s){return wc(s)>18});if(analytical){sug.push({problem:'Missing Data-Backed Evidence',original:analytical.trim(),rewrite:analytical.trim().replace(/\.$/,' — and the data supports this: [insert relevant statistic].'),explanation:'Mr. Tobi anchors claims with concrete data points. Even one strong number lifts authority.'});}}if(sug.length<5){var midQ=sentences.slice(1,-1).some(function(s){return s.trim().endsWith('?')});if(!midQ&&sentences.length>4){var midIdx=Math.floor(sentences.length*0.4);var midSent=sentences[midIdx];if(midSent){sug.push({problem:'Missing Mid-Article Rhetorical Question',original:midSent.trim(),rewrite:'But here\'s the question we should be asking: '+midSent.trim().charAt(0).toLowerCase()+midSent.trim().slice(1).replace(/\.$/,'?'),explanation:'Mr. Tobi uses rhetorical questions mid-article to re-engage readers.'});}}}if(sug.length<5){var afN=countTerms(lo,VOICE.africanRefs);if(afN===0&&sentences.length>3){var genSent=sentences.find(function(s){return wc(s)>12&&!/nigeria|africa|lagos/i.test(s)});if(genSent){sug.push({problem:'Missing Nigerian/African Market Context',original:genSent.trim(),rewrite:genSent.trim().replace(/\.$/,', particularly in the Nigerian market where this dynamic plays out in unique ways.'),explanation:'Mr. Tobi\'s voice is deeply rooted in African market specificity.'});}}}return sug.slice(0,5);}
+
+function analyzeLocally(text){var sentences=splitSentences(text);var vm=scoreVoiceMatch(text,sentences);var ta=scoreToneAlignment(text,sentences);var au=scoreAuthority(text,sentences);var cl=scoreClarity(text,sentences);var og=scoreOriginality(text,sentences);var overall=Math.round((vm.score+ta.score+au.score+cl.score+og.score)/5);return{overallScore:overall,metrics:{voiceMatch:{score:vm.score,insight:vm.insight},toneAlignment:{score:ta.score,insight:ta.insight},authority:{score:au.score,insight:au.insight},clarity:{score:cl.score,insight:cl.insight},originality:{score:og.score,insight:og.insight}},suggestions:generateSuggestions(text,sentences),heatmap:generateHeatmap(text,sentences)};}
+
+async function runAnalysis(){var text=document.getElementById('article-input').value.trim();var err=document.getElementById('err-msg');err.style.display='none';if(text.split(/\s+/).filter(Boolean).length<60){err.textContent='⚠ Please paste at least 60 words before running the analysis.';err.style.display='block';return;}var btn=document.getElementById('run-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Analyzing…';await new Promise(function(r){setTimeout(r,1000+Math.random()*800)});try{var result=analyzeLocally(text);renderResults(result);}catch(e){err.textContent='⚠ Analysis error: '+e.message;err.style.display='block';}finally{btn.disabled=false;btn.innerHTML='⚡ Run Voice Analysis';}}
+</script>
+</body>
+</html>
