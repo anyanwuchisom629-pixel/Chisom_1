@@ -428,6 +428,174 @@ function generateSuggestions(text,sentences){var lo=text.toLowerCase();var sug=[
 function analyzeLocally(text){var sentences=splitSentences(text);var vm=scoreVoiceMatch(text,sentences);var ta=scoreToneAlignment(text,sentences);var au=scoreAuthority(text,sentences);var cl=scoreClarity(text,sentences);var og=scoreOriginality(text,sentences);var overall=Math.round((vm.score+ta.score+au.score+cl.score+og.score)/5);return{overallScore:overall,metrics:{voiceMatch:{score:vm.score,insight:vm.insight},toneAlignment:{score:ta.score,insight:ta.insight},authority:{score:au.score,insight:au.insight},clarity:{score:cl.score,insight:cl.insight},originality:{score:og.score,insight:og.insight}},suggestions:generateSuggestions(text,sentences),heatmap:generateHeatmap(text,sentences)};}
 
 async function runAnalysis(){var text=document.getElementById('article-input').value.trim();var err=document.getElementById('err-msg');err.style.display='none';if(text.split(/\s+/).filter(Boolean).length<60){err.textContent='⚠ Please paste at least 60 words before running the analysis.';err.style.display='block';return;}var btn=document.getElementById('run-btn');btn.disabled=true;btn.innerHTML='<span class="spin"></span> Analyzing…';await new Promise(function(r){setTimeout(r,1000+Math.random()*800)});try{var result=analyzeLocally(text);renderResults(result);}catch(e){err.textContent='⚠ Analysis error: '+e.message;err.style.display='block';}finally{btn.disabled=false;btn.innerHTML='⚡ Run Voice Analysis';}}
-</script>
+/* === PATCH 1: CONTENT TYPE SELECTOR === */
+var patchStyle = document.createElement('style');
+patchStyle.textContent = '.type-bar{display:flex;gap:6px;margin-bottom:14px}.type-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--mid);font-family:var(--fh);font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;transition:all .2s;cursor:pointer}.type-btn:hover{color:var(--text);background:rgba(0,200,255,.05)}.type-btn.active{color:var(--cyan);background:rgba(0,200,255,.1);border-color:rgba(0,200,255,.3)}.ba-wrap{margin-top:20px}.ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:900px){.ba-grid{grid-template-columns:1fr}}.ba-panel{padding:20px 24px}.ba-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.ba-tag{padding:4px 12px;border-radius:6px;font-family:var(--fh);font-size:8px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}.ba-tag-before{background:rgba(255,79,106,.08);color:#ff9aaa;border:1px solid rgba(255,79,106,.2)}.ba-tag-after{background:rgba(0,229,160,.08);color:var(--green);border:1px solid rgba(0,229,160,.2)}.ba-text{font-size:13px;line-height:1.9;color:var(--mid);font-weight:300;white-space:pre-wrap}.ba-text-after{color:var(--text)}.ba-copy{padding:8px 16px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--cyan);font-family:var(--fh);font-size:8px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;transition:all .2s;cursor:pointer}.ba-copy:hover{background:var(--cyan-lo)}';
+document.head.appendChild(patchStyle);
+
+var contentType = 'article';
+var editorTopbar = document.querySelector('.editor-topbar');
+var typeBar = document.createElement('div');
+typeBar.className = 'type-bar';
+typeBar.innerHTML = '<button class="type-btn active" id="type-article" onclick="setContentType(\'article\')">📄 Website Article</button><button class="type-btn" id="type-caption" onclick="setContentType(\'caption\')">✏️ Caption</button>';
+editorTopbar.after(typeBar);
+
+function setContentType(type){
+  contentType = type;
+  document.querySelectorAll('.type-btn').forEach(function(b){b.classList.remove('active')});
+  document.getElementById('type-'+type).classList.add('active');
+               }
+               /* === PATCH 2: IMPROVED SUGGESTIONS === */
+var rhetoricalByTopic = {
+  market:["But are we truly listening to what the market is telling us?","The real question is: are we building for the market as it is, or as we wish it were?","But what does the consumer really need from us right now?"],
+  leadership:["But what does real leadership demand in moments like these?","The harder question is: are we leading, or simply managing?","But are we building leaders, or just filling positions?"],
+  sustainability:["But can we honestly say our actions match our ambitions?","The question we must confront: is this sustainable, or just convenient?","But what does genuine sustainability look like beyond the reports?"],
+  growth:["But is this growth serving the people it should serve?","The question worth asking: growth for whom, and at what cost?","But are we measuring what truly matters?"],
+  general:["But here is what we often overlook.","The more important question is: what are we willing to do about it?","But have we stopped to consider what this really means?","The honest question is: are we doing enough?"]
+};
+
+function detectTopic(text){
+  var lo=text.toLowerCase();var scores={market:0,leadership:0,sustainability:0,growth:0};
+  ['market','consumer','customer','brand','product','demand','supply','retail','fmcg','buyer'].forEach(function(w){if(lo.includes(w))scores.market++});
+  ['leader','leadership','manage','executive','team','talent','mentor','coach','govern'].forEach(function(w){if(lo.includes(w))scores.leadership++});
+  ['sustain','environment','esg','climate','green','impact','community','social','responsible'].forEach(function(w){if(lo.includes(w))scores.sustainability++});
+  ['growth','revenue','profit','scale','expand','increase','roi','margin','invest','performance'].forEach(function(w){if(lo.includes(w))scores.growth++});
+  var best='general',max=0;for(var k in scores){if(scores[k]>max){max=scores[k];best=k;}}
+  return max>=2?best:'general';
+}
+
+function getSmartRhetorical(text){
+  var topic=detectTopic(text);
+  var opts=rhetoricalByTopic[topic]||rhetoricalByTopic.general;
+  return opts[Math.floor(Math.random()*opts.length)];
+}
+
+var strongClosings=[
+  "The path forward demands more than intention — it demands action.",
+  "This is not a challenge for tomorrow. It is the work of today.",
+  "The opportunity is here. The question is whether we have the courage to seize it.",
+  "For those willing to lead with purpose, the future has never looked more promising.",
+  "The time for deliberation has passed. Now is the time to build."
+];
+
+generateSuggestions = function(text,sentences){
+  var lo=text.toLowerCase();var sug=[];
+  var last=(sentences[sentences.length-1]||'').trim();
+
+  if(contentType==='caption'){
+    if(!last.endsWith('?')){
+      sug.push({problem:'Missing Closing Engagement Question',original:last,rewrite:last.replace(/[.!]$/,'')+' — what has your experience been?',explanation:'Captions benefit from closing with an engagement question to drive comments and interaction.'});
+    }
+  } else {
+    var hasStrongClose=/\b(must|will|time|future|forward|build|lead|commit|act|demand|opportunity|now)\b/i.test(last);
+    if(last.endsWith('?')){
+      var cl=strongClosings[Math.floor(Math.random()*strongClosings.length)];
+      sug.push({problem:'Article Ends With Question Instead of Strong Close',original:last,rewrite:cl,explanation:'Website articles should conclude with a decisive, forward-looking statement — not a question. A strong close leaves the reader with conviction.'});
+    } else if(!hasStrongClose&&wc(last)<8){
+      var cl=strongClosings[Math.floor(Math.random()*strongClosings.length)];
+      sug.push({problem:'Weak Article Closing',original:last,rewrite:last+' '+cl,explanation:'Website articles need a strong, decisive closing that leaves the reader with a clear takeaway and sense of purpose.'});
+    }
+  }
+
+  var weN=(lo.match(/\bwe\b/g)||[]).length;
+  if(weN<2){var target=sentences.find(function(s){return/\b(they|companies|organizations|businesses|firms|leaders)\b/i.test(s)});if(target){sug.push({problem:'Lacks Inclusive Executive Voice',original:target.trim(),rewrite:target.trim().replace(/\bThey\b/,'We').replace(/\bthey\b/,'we').replace(/\bcompanies\b/,'we as industry leaders').replace(/\borganizations\b/,'our organizations').replace(/\bbusinesses\b/,'we'),explanation:'Mr. Tobi uses inclusive "we" framing to position himself within the narrative.'});}}
+
+  var longSent=sentences.find(function(s){return wc(s)>45});
+  if(longSent&&sug.length<5){var words=longSent.trim().split(/\s+/);var mid=Math.floor(words.length/2);var breakAt=mid;for(var i=Math.max(mid-6,1);i<Math.min(mid+6,words.length);i++){if(/[,;]$/.test(words[i])||/^(and|but|which|while|yet|however)$/i.test(words[i])){breakAt=/[,;]$/.test(words[i])?i+1:i;break;}}var p1=words.slice(0,breakAt).join(' ').replace(/[,;]$/,'.')+'.';var p2raw=words.slice(breakAt).join(' ');var p2=p2raw.charAt(0).toUpperCase()+p2raw.slice(1);sug.push({problem:'Sentence Too Long ('+wc(longSent)+' words)',original:longSent.trim(),rewrite:p1+' '+p2,explanation:"Mr. Tobi's rhythm alternates short punchy sentences with medium analytical ones."});}
+
+  for(var ci=0;ci<VOICE.cliches.length;ci++){var c=VOICE.cliches[ci];if(lo.includes(c)&&sug.length<5){var cSent=sentences.find(function(s){return s.toLowerCase().includes(c)});if(cSent){var rep=VOICE.clicheReplacements[c]||'more specific language';var regex=new RegExp(c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');sug.push({problem:'Cliche Detected: "'+c+'"',original:cSent.trim(),rewrite:cSent.trim().replace(regex,rep),explanation:"Replace overused jargon with specific, original language."});break;}}}
+
+  if(!/\d+/.test(text)&&sug.length<5){var analytical=sentences.find(function(s){return wc(s)>18});if(analytical){sug.push({problem:'Missing Data-Backed Evidence',original:analytical.trim(),rewrite:analytical.trim().replace(/\.$/,' — and the data supports this: [insert relevant statistic or market figure].'),explanation:"Mr. Tobi anchors claims with concrete data. Even one strong number lifts authority."});}}
+
+  if(sug.length<5){var midQ=sentences.slice(1,-1).some(function(s){return s.trim().endsWith('?')});if(!midQ&&sentences.length>4){var midIdx=Math.floor(sentences.length*0.4);var midSent=sentences[midIdx];if(midSent){var rq=getSmartRhetorical(text);sug.push({problem:'Consider Adding a Rhetorical Question',original:midSent.trim(),rewrite:rq+' '+midSent.trim(),explanation:"A well-placed rhetorical question re-engages readers. This question is inserted before the sentence to create a reflective pause."});}}}
+
+  if(sug.length<5){var afN=countTerms(lo,VOICE.africanRefs);if(afN===0&&sentences.length>3){var genSent=sentences.find(function(s){return wc(s)>12&&!/nigeria|africa|lagos/i.test(s)});if(genSent){sug.push({problem:'Missing Nigerian/African Market Context',original:genSent.trim(),rewrite:genSent.trim().replace(/\.$/,', particularly in the Nigerian market where this dynamic plays out in unique ways.'),explanation:"Grounding global ideas in Nigerian/African context is a key voice differentiator."});}}}
+
+  return sug.slice(0,5);
+};
+               /* === PATCH 3: BEFORE / AFTER VIEW === */
+function generateAfterText(originalText,suggestions){
+  var result=originalText;
+  for(var i=0;i<suggestions.length;i++){
+    var s=suggestions[i];
+    if(s.original&&s.rewrite&&result.indexOf(s.original)!==-1){
+      result=result.replace(s.original,s.rewrite);
+    }
+  }
+  return result;
+}
+
+function copyAfterText(){
+  var el=document.getElementById('after-text-content');
+  if(!el)return;
+  var text=el.textContent||el.innerText;
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){showCopied()}).catch(function(){fallbackCopy(text)});
+    }else{fallbackCopy(text);}
+  }catch(e){fallbackCopy(text);}
+}
+
+function fallbackCopy(text){
+  var ta=document.createElement('textarea');
+  ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');showCopied();}catch(e){}
+  document.body.removeChild(ta);
+}
+
+function showCopied(){
+  var btn=document.getElementById('copy-after-btn');
+  if(btn){var orig=btn.innerHTML;btn.innerHTML='✓ COPIED';setTimeout(function(){btn.innerHTML=orig},2000);}
+}
+
+var _patchRender=renderResults;
+renderResults=function(data){
+  _patchRender(data);
+
+  var originalText=document.getElementById('article-input').value.trim();
+  var afterText=generateAfterText(originalText,data.suggestions);
+
+  var old=document.getElementById('before-after-section');
+  if(old)old.remove();
+
+  var section=document.createElement('div');
+  section.id='before-after-section';
+  section.className='ba-wrap';
+
+  var grid=document.createElement('div');
+  grid.className='ba-grid';
+
+  var leftPanel=document.createElement('div');
+  leftPanel.className='glass ba-panel';
+  leftPanel.innerHTML='<div class="ba-head"><div class="panel-title">Original Text</div><span class="ba-tag ba-tag-before">Before</span></div>';
+  var leftText=document.createElement('div');
+  leftText.className='ba-text';
+  leftText.textContent=originalText;
+  leftPanel.appendChild(leftText);
+
+  var rightPanel=document.createElement('div');
+  rightPanel.className='glass ba-panel';
+  rightPanel.style.borderColor='rgba(0,229,160,.2)';
+  rightPanel.innerHTML='<div class="ba-head"><div class="panel-title">Corrected Text</div><div style="display:flex;gap:8px;align-items:center"><span class="ba-tag ba-tag-after">After</span><button class="ba-copy" id="copy-after-btn" onclick="copyAfterText()">📋 Copy Text</button></div></div>';
+  var rightText=document.createElement('div');
+  rightText.className='ba-text ba-text-after';
+  rightText.id='after-text-content';
+  rightText.textContent=afterText;
+  rightPanel.appendChild(rightText);
+
+  grid.appendChild(leftPanel);
+  grid.appendChild(rightPanel);
+  section.appendChild(grid);
+
+  var analyzerResults=document.getElementById('analyzer-results');
+  var scoreBanner=analyzerResults.querySelector('.score-banner');
+  if(scoreBanner&&scoreBanner.nextSibling){
+    analyzerResults.insertBefore(section,scoreBanner.nextSibling);
+  }else{
+    analyzerResults.appendChild(section);
+  }
+};
+             </script>
 </body>
 </html>
