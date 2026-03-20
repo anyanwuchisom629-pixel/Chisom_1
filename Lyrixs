@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lyrics Tool</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: white;
+    padding: 20px;
+}
+
+.container {
+    max-width: 800px;
+    margin: auto;
+}
+
+input, textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background: #1e293b;
+    border: none;
+    color: white;
+    border-radius: 6px;
+}
+
+button {
+    margin-top: 15px;
+    padding: 12px;
+    width: 100%;
+    background: #22c55e;
+    border: none;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.output {
+    margin-top: 20px;
+    background: #020617;
+    padding: 15px;
+    border-radius: 6px;
+    white-space: pre-wrap;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h2>Lyrics Formatter Tool</h2>
+
+    <input id="song" placeholder="Song Name">
+    <input id="artist" placeholder="Artist(s)">
+    <input id="youtube" placeholder="YouTube Link">
+
+    <textarea id="lyrics" rows="10" placeholder="Raw Lyrics / Captions"></textarea>
+
+    <button onclick="process()">Generate Submission</button>
+
+    <div class="output" id="output"></div>
+</div>
+
+<script>
+function extractVideoID(url) {
+    const regExp = /(?:youtube\\.com.*(?:\\?|&)v=|youtu\\.be\\/)([^&#]+)/;
+    const match = url.match(regExp);
+    return match ? match[1] : null;
+}
+
+async function fetchCaptions(videoId) {
+    try {
+        const url = `https://corsproxy.io/?https://www.youtube.com/api/timedtext?lang=en&v=${videoId}`;
+        const res = await fetch(url);
+        const text = await res.text();
+
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "text/xml");
+        const texts = xml.getElementsByTagName("text");
+
+        let captions = "";
+        for (let i = 0; i < texts.length; i++) {
+            captions += texts[i].textContent + "\n";
+        }
+
+        return captions;
+    } catch (e) {
+        return "Failed to fetch captions. Paste lyrics manually.";
+    }
+}
+
+function generateTags(song, artist) {
+    return [
+        song,
+        `${song} ${artist}`,
+        `${artist} ${song}`,
+        `${song} lyrics`,
+        `${artist} songs`,
+        "gospel",
+        "worship",
+        "afro gospel",
+        "christian music",
+        "praise and worship",
+        "church songs",
+        "spiritual music",
+        "worship songs 2024",
+        "latest gospel songs",
+        "live worship",
+        "lyrics video",
+        "official audio",
+        `${song} official`,
+        `${song} live`,
+        `${artist} worship`
+    ].join("\n");
+}
+
+function formatLyrics(raw) {
+    const lines = raw.split("\n").filter(l => l.trim() !== "");
+    let result = "[Verse 1]\n";
+
+    lines.forEach(line => {
+        result += line.trim() + "\n";
+    });
+
+    return result;
+}
+
+async function process() {
+    const song = document.getElementById("song").value.trim();
+    const artist = document.getElementById("artist").value.trim();
+    const youtube = document.getElementById("youtube").value.trim();
+    let lyrics = document.getElementById("lyrics").value.trim();
+
+    if (!lyrics && youtube) {
+        const videoId = extractVideoID(youtube);
+        if (videoId) {
+            lyrics = await fetchCaptions(videoId);
+            document.getElementById("lyrics").value = lyrics;
+        }
+    }
+
+    const title = `${song.toLowerCase().replace(/ /g,"-")}-lyrics-by-${artist.toLowerCase().replace(/ /g,"-")}`;
+    const formattedLyrics = formatLyrics(lyrics);
+    const tags = generateTags(song, artist);
+
+    const output = `Title:
+${title}
+
+Lyrics:
+
+${formattedLyrics}
+
+Tags:
+${tags}
+
+Artists and Albums:
+Song: ${song}
+Artists: ${artist}
+Album: Unknown
+
+Official YouTube Video:
+${youtube || "[No link provided]"}`;
+
+    document.getElementById("output").innerText = output;
+}
+</script>
+</body>
+</html>
